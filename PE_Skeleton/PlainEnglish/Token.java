@@ -7,6 +7,7 @@ public class Token {
     public TokenTypes Type;
     public int ColumnNumber;
     public int LineNumber;
+    
     public Token(TokenTypes type, int line, int column) {
         Type = type;
         ColumnNumber = column;
@@ -19,6 +20,14 @@ public class Token {
         ColumnNumber = column;
         LineNumber = line;
         Value = Optional.of(val);
+    }
+    
+    public TokenTypes getType() {
+    	
+    }
+    
+    public Optional<String> getValue(){
+    	
     }
 
     public String toString() {
