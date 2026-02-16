@@ -12,7 +12,7 @@ public class TextManager
     }
 
     public boolean isAtEnd() {
-    	return false;
+    	return true;
     }
     
     public char peekCharacter() {

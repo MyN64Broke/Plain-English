@@ -23,11 +23,11 @@ public class Token {
     }
     
     public TokenTypes getType() {
-    	
+    	return Type;
     }
     
     public Optional<String> getValue(){
-    	
+    	return Value;
     }
 
     public String toString() {
@@ -61,6 +61,7 @@ public class Token {
         NOT,
         COMMA,
         PLUS,
+        ASSIGN,
         HYPHEN,
         ASTERISK,
         SLASH,
