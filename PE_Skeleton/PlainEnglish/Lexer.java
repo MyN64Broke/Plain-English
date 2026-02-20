@@ -46,29 +46,79 @@ public class Lexer    {
         PuncMap.put("<", TokenTypes.LESSTHAN);
     }
     
-    public void lex() {
+    public void lex() throws SyntaxErrorException {
     	ArrayList<Token> ListOfTokens = new ArrayList<Token>();
-    	String currentWord;
     	while(!tm.isAtEnd()) {
-    		char C = tm.peekCharacter();
+    		char C = tm.getCharacter();
+    		int line = tm.getLine();
+    		int col = tm.getCol();
     		if(Character.isLetter(C)) {
     			ListOfTokens.add(readWord());
     		}else if(Character.isDigit(C)) {
-    			ListOfTokens.add(readNumber());
+				ListOfTokens.add(readNumber());
+    		}else if(PuncMap.containsKey(Character.toString(C))) {
+    			ListOfTokens.add(readPunctuation());
+    		}else if(C == '\n') {
+    			Token newline = new Token(TokenTypes.NEWLINE, line, col, Character.toString(C));
+    			ListOfTokens.add(newline);
+    			tm.newline();
+    		}else if(C == '\t') {
+    			Token tab = new Token(TokenTypes.INDENT, line, col, Character.toString(C));
+    			ListOfTokens.add(tab);
     		}
     	}
     }
     
     private Token readWord() {
-    	
+    	Token token;
+    	String buffer = "";
+    	int line = tm.getLine();
+    	int col = tm.getCol();
+    	while(tm.peekCharacter() != ' ' && !tm.isAtEnd()) {
+    		buffer += tm.getCharacter();
+    		tm.increment();
+    	}
+    	if(WordMap.containsKey(buffer)) {
+    		token = new Token(WordMap.get(buffer), line, col, buffer);
+    	}else {
+    		token = new Token(TokenTypes.IDENTIFIER, line, col, buffer);
+    	}
+    	return token;
     }
     
-    private Token readNumber() {
-    	
+    private Token readNumber() throws SyntaxErrorException {
+    	int line = tm.getLine();
+    	int col = tm.getCol();
+    	String buffer = "";
+    	while(tm.peekCharacter() != ' ' && !tm.isAtEnd()) {
+    		char C = tm.getCharacter();
+    		if(!Character.isDigit(C) && !(C == '.')) {
+    			throw new SyntaxErrorException(buffer, tm.getLine(), tm.getCol());
+    		}else {
+    			buffer += C;
+    			tm.increment();
+    		}
+    	}
+    	Token token = new Token(TokenTypes.NUMBER, line, col, buffer);
+    	return token;
     }
     
-    private Token readPunctuation() {
-    	
+    private Token readPunctuation() throws SyntaxErrorException {
+    	String buffer = Character.toString(tm.getCharacter());
+    	char peek = tm.peekCharacter();
+    	Token puncToken;
+    	if(PuncMap.containsKey(buffer + Character.toString(peek))) {
+    		buffer += Character.toString(peek);
+    		puncToken = new Token(PuncMap.get(buffer), tm.getLine(), tm.getCol(), buffer);
+    		tm.increment();
+    		tm.increment();
+    	}else if(!Character.isLetter(peek) && !Character.isDigit(peek) && peek != ' ') {
+    		throw new SyntaxErrorException(buffer, tm.getLine(), tm.getCol());
+    	}else {
+    		puncToken = new Token(PuncMap.get(buffer), tm.getLine(), tm.getCol(), buffer);
+    		tm.increment();
+    	}
+    	return puncToken;
     }
 }
 
