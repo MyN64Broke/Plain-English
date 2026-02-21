@@ -16,7 +16,15 @@ public class TextManager
     }
 
     public boolean isAtEnd() {
-    	if(position == text.length()) {
+    	if(position >= text.length()) {
+    		return true;
+    	}else {
+    		return false;
+    	}
+    }
+    
+    public boolean isAtEnd(int pos) {
+    	if(position + pos >= text.length()) {
     		return true;
     	}else {
     		return false;
@@ -38,7 +46,7 @@ public class TextManager
     	return currentChar;
     }
     
-    public void increment() {
+    public void increment(){
     	position++;
     	positionCol++;
     }
@@ -55,6 +63,10 @@ public class TextManager
     
     public int getLine() {
     	return positionLine;
+    }
+    
+    public int getRemaining() {
+    	return text.length() - position;
     }
 }
 
