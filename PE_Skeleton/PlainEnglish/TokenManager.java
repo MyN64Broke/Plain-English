@@ -13,11 +13,11 @@ public class TokenManager
         this.tokens = tokens;
     }
     
-    private Optional<Token> matchAndRemove(TokenTypes type){
+    Optional<Token> MatchAndRemove(TokenTypes type){
 		return null;
     }
     
-    private Optional<Token> peek(int distance){
+    Optional<Token> Peek(int distance){
 		return null;
     	
     }
