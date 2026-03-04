@@ -3,6 +3,7 @@ package PlainEnglish;
 
 import java.util.LinkedList;
 import java.util.Optional;
+import PlainEnglish.Token.TokenTypes;
 
 public class TokenManager
 {
@@ -10,6 +11,31 @@ public class TokenManager
     public TokenManager(LinkedList<Token> tokens)
     {
         this.tokens = tokens;
+    }
+    
+    private Optional<Token> matchAndRemove(TokenTypes type){
+		return null;
+    }
+    
+    private Optional<Token> peek(int distance){
+		return null;
+    	
+    }
+    
+    public boolean nextTwoTokensMatch(Token.TokenTypes first, Token.TokenTypes second) {
+    	if(first == second) {
+    		return true;
+    	}else {
+    		return false;
+    	}
+    }
+    
+    public int getCurrentLine() {
+    	return tokens.getFirst().LineNumber;
+    }
+    
+    public int getCurrentColumn() {
+    	return tokens.getFirst().ColumnNumber;
     }
 
 }
