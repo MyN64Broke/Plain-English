@@ -1,0 +1,18 @@
+JavaProgram = {Class|Interface}
+Class = [("public" | "private") "static"] "class" Name ["extends" Name] ["implements" Name{, Name} ] ClassBody
+Name = word
+ClassBody = "{" {StatementBlock | FunctionHeader} "}"
+StatmentBlock = {Statmenent}
+Statement = {IfNode | ForStatement | WhileStatement | Assignment | FunctionCall}
+IfNode = "if" BooleanExpression StatementBlock ["else" StatementBlock]
+BooleanExpresseion = VariableOrLiberal BoolOp VariableOrLiteral
+BoolOp = "<" | ">" | "<=" | ">=" | "==" | "!="
+VariableOrLiteral = word | number
+ForStatment = "for" "(" Statement ";" BooleanExpression ";" Statement ")" StatmentBlock
+WhileStatement = "while" "(" BooleanExpression ")" "{" StatementBlock "}"
+Assignment = ([Type] Name "=" ["new" Type] (VariableOrLiteral | FunctionCall) | Name (("+" "+") | ("-" "-"))) ";"
+FunctionCall = [(Name ".")] Name "(" {VariableOrLiteral ["," VariableOrLiteral]} ")" ";"
+FunctionHeader = [("public" | "private") "static"] ReturnType Name "(" {Type Name ["," Type Name]} ")" "{" StatmentBlock "}"
+Interface = ["public" | "private"] "interface" Name "{" {FunctionPrototype} "}"
+Type = "int" | "double" | "float" | "long" | "short" | "byte" | "char"
+ReturnType = (Type | "void")
