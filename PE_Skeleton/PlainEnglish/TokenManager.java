@@ -14,12 +14,23 @@ public class TokenManager
     }
     
     Optional<Token> MatchAndRemove(TokenTypes type){
-		return null;
+    	if(tokens.size() > 0) {
+	    	if(tokens.getFirst().Type == type) {
+	    		return Optional.of(tokens.removeFirst());
+	    	}else {
+	    		return Optional.empty();
+	    	}
+    	}else {
+    		return Optional.empty();
+    	}
     }
     
     Optional<Token> Peek(int distance){
-		return null;
-    	
+    	if(tokens.size() > 0) {
+    		return Optional.of(tokens.get(distance));
+    	}else {
+    		return Optional.empty();
+    	}
     }
     
     public boolean nextTwoTokensMatch(Token.TokenTypes first, Token.TokenTypes second) {
