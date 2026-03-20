@@ -48,6 +48,10 @@ public class TokenManager
     public int getCurrentColumn() {
     	return tokens.getFirst().ColumnNumber;
     }
+    
+    public int getCurrentSize() {
+    	return tokens.size();
+    }
 
 }
 

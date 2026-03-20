@@ -9,23 +9,28 @@ import PlainEnglish.AST.*;
 
 public class Parser {
 	
-	private final LinkedList<Token> tokens;
 	private final TokenManager tm;
 	
 	public Parser(LinkedList<Token> tokens) {
-		this.tokens = tokens;
 		this.tm = new TokenManager(tokens);
 	}
 	
-	private void RequireNewLine() {
-		
+	private void RequireNewLine() throws SyntaxErrorException {
+		Optional<Token> lastToken = tm.Peek(tm.getCurrentSize());
+		if(lastToken.isEmpty()) {
+			throw new SyntaxErrorException("Your program is empty!", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		if(lastToken.get().Type != TokenTypes.NEWLINE) {
+			throw new SyntaxErrorException("NEWLINE token required at end of program.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
 	}
 	
 	public Optional<Program> Program() throws SyntaxErrorException{
 		Program program = new Program();
+		RequireNewLine();
 		while(tm.Peek(0).isPresent()) {
 			if(tm.Peek(0).get().Type == TokenTypes.NEWLINE) {
-				tm.MatchAndRemove(null);
+				tm.MatchAndRemove(TokenTypes.NEWLINE);
 			}else if(tm.Peek(0).get().getType() == TokenTypes.A || tm.Peek(0).get().getType() == TokenTypes.AN ) {
 				program.typedef.add(TypeDef().get());
 			}else if(tm.Peek(0).get().getType() == TokenTypes.TO) {
@@ -199,6 +204,7 @@ public class Parser {
 	}
 	
 	public Optional<If> If() throws SyntaxErrorException{
+		/*
 		If $if = new If();
 		if(tm.MatchAndRemove(TokenTypes.IF).isEmpty()) {
 			//How we get here, I don't know
@@ -233,9 +239,12 @@ public class Parser {
 			$if.falseCase = statementblock;
 		}
 		return Optional.of($if);
+		*/
+		return null;
 	}
 	
 	public Optional<BoolExpTerm> BoolExpTerm() throws SyntaxErrorException{
+		/*
 		BoolExpTerm boolexpterm = new BoolExpTerm();
 		Optional<BoolExpFactor> boolexpfactor = BoolExpFactor();
 		if(boolexpfactor.isEmpty()) {
@@ -266,9 +275,32 @@ public class Parser {
 			throw new SyntaxErrorException("Boolean expression factor must be followed by one of the following: and, or, not.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
 		return Optional.of(boolexpterm);
+		*/
+		return null;
 	}
 	
-	public Optional<BoolExpFactor> BoolExpFactor(){
+	public Optional<BoolExpFactor> BoolExpFactor() throws SyntaxErrorException{
+		/*
+		BoolExpFactor boolexpfactor = new BoolExpFactor();
+		if(tm.Peek(0).get().Type == ) {
+			
+		}
+		Optional<Expression> expression = Expression();
+		if(expression.isEmpty()) {
+			throw new SyntaxErrorException("Boolean expression factor must start with an expression.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		boolexpfactor.lhs = expression;
+		
+		return Optional.of(boolexpfactor);
+		*/
+		return null;
+	}
+	
+	public Optional<Expression> Expression(){
+		/*
+		Expression expression = new Expression();
+		return Optional.of(expression);
+		*/
 		return null;
 	}
 	
@@ -276,15 +308,71 @@ public class Parser {
 		return null;
 	}
 	
-	public Optional<Set> Set() {
-		return null;
+	public Optional<Set> Set() throws SyntaxErrorException {
+		Set set = new Set();
+		if(tm.MatchAndRemove(TokenTypes.SET).isEmpty()) {
+			throw new SyntaxErrorException("Set statement must begin with 'SET' token.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		Optional<VariableReference> variablereference = VariableReference();
+		if(variablereference.isEmpty()) {
+			throw new SyntaxErrorException("Set statement must have a variable reference to assign to.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		set.variablereference = variablereference.get();
+		if(tm.MatchAndRemove(TokenTypes.TO).isEmpty()) {
+			throw new SyntaxErrorException("Set statement must have 'TO' token to assign value to a variable.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		Optional<Expression> expression = Expression();
+		if(expression.isEmpty()) {
+			throw new SyntaxErrorException("Set statement much have an expression to assign variable to.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		set.expression = expression.get();
+		int newlineCount = 0;
+		while (tm.MatchAndRemove(TokenTypes.NEWLINE).isPresent()) {
+			newlineCount++;
+		}
+		if (newlineCount == 0) {
+			throw new SyntaxErrorException("Set statement must be followed by at least 1 NEWLINE token.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		return Optional.of(set);
 	}
 	
-	public Optional<Make> Make() {
-		return null;
+	public Optional<Make> Make() throws SyntaxErrorException {
+		Make make = new Make();
+		if(tm.MatchAndRemove(TokenTypes.MAKE).isEmpty()) {
+			throw new SyntaxErrorException("Make statement must begin with 'MAKE' token.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		Optional<Token> type = tm.MatchAndRemove(TokenTypes.IDENTIFIER);
+		if(type.isEmpty()) {
+			throw new SyntaxErrorException("Make statement must have a declared type.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		make.type = Objects.toString(type.get().Value);
+		if(tm.MatchAndRemove(TokenTypes.NAMED).isEmpty()) {
+			throw new SyntaxErrorException("Make statement must have a name for object being made.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		Optional<Token> name = tm.MatchAndRemove(TokenTypes.IDENTIFIER);
+		if(name.isEmpty()) {
+			throw new SyntaxErrorException("No name given for object to be made.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		make.name = Objects.toString(name.get().Value);
+		int newlineCount = 0;
+		while (tm.MatchAndRemove(TokenTypes.NEWLINE).isPresent()) {
+			newlineCount++;
+		}
+		if (newlineCount == 0) {
+			throw new SyntaxErrorException("Make statement must be followed by at least 1 NEWLINE token.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		return Optional.of(make);
 	}
 	
 	public Optional<FunctionCall> FunctionCall(){
+		return null;
+	}
+	
+	public Optional<VariableReference> VariableReference(){
+		/*
+		VariableReference variablereference = new VariableReference();
+		return Optional.of(variablereference);
+		*/
 		return null;
 	}
 }
