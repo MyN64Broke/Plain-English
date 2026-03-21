@@ -16,7 +16,7 @@ public class PlainEnglishParser {
 	}
 	
 	private void RequireNewLine() throws SyntaxErrorException {
-		Optional<Token> lastToken = tm.Peek(tm.getCurrentSize());
+		Optional<Token> lastToken = tm.Peek(tm.getCurrentSize() - 1);
 		if(lastToken.isEmpty()) {
 			throw new SyntaxErrorException("Your program is empty!", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
