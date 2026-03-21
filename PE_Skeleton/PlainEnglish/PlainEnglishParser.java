@@ -167,6 +167,8 @@ public class PlainEnglishParser {
 				throw new SyntaxErrorException("Name override with 'named' must have Identifier afterward.", tm.getCurrentLine(), tm.getCurrentColumn());
 			}
 			parameter.nameOverride = name.get().Value;
+		}else {
+			parameter.named = false;
 		}
 		return Optional.of(parameter);
 	}
@@ -236,7 +238,9 @@ public class PlainEnglishParser {
 			if(statementblock.isEmpty()) {
 				throw new SyntaxErrorException("Else statement must have at least one statement in block.", tm.getCurrentLine(), tm.getCurrentColumn());
 			}
-			$if.falseCase = statementblock;
+			$if.falseCase = statementblock;	
+		}else{
+			$is.$else = false;
 		}
 		return Optional.of($if);
 		*/
@@ -252,6 +256,7 @@ public class PlainEnglishParser {
 		}
 		boolexpterm.boolexpfactor = boolexpfactor;
 		if(tm.Peek(0).get().Type == TokenTypes.AND || tm.Peek(0).get().Type == TokenTypes.OR) {
+			boolexpterm.not = false;
 			while(tm.Peek(0).get().Type == TokenTypes.AND || tm.Peek(0).get().Type == TokenTypes.OR) {
 				if(tm.MatchAndRemove(TokenTypes.AND).isPresent()) {
 					boolexpterm.theandORor.add(andORor.and);
@@ -296,12 +301,108 @@ public class PlainEnglishParser {
 		return null;
 	}
 	
-	public Optional<Expression> Expression(){
-		/*
+	public Optional<Expression> Expression() throws SyntaxErrorException{
 		Expression expression = new Expression();
+		Optional<Term> term1 = Term();
+		if(term1.isEmpty()) {
+			throw new SyntaxErrorException("An expression must begin with a valid term.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		expression.term.add(term1.get());
+		while(tm.Peek(0).get().Type == TokenTypes.PLUS || tm.Peek(0).get().Type == TokenTypes.HYPHEN) {
+			if(tm.MatchAndRemove(TokenTypes.PLUS).isPresent()) {
+				expression.theplusORhyphen.add(plusORhyphen.plus);
+			}else if(tm.MatchAndRemove(TokenTypes.HYPHEN).isPresent()){
+				expression.theplusORhyphen.add(plusORhyphen.hyphen);
+			}
+			Optional<Term> newTerm = Term();
+			if(newTerm.isEmpty()) {
+				throw new SyntaxErrorException("'+' or '-' tokens in an expression must be followed by a valid term.", tm.getCurrentLine(), tm.getCurrentColumn());
+			}
+			expression.term.add(newTerm.get());
+		}
 		return Optional.of(expression);
-		*/
-		return null;
+	}
+	
+	public Optional<Term> Term() throws SyntaxErrorException{
+		Term term = new Term();
+		Optional<Factor> factor1 = Factor();
+		if(factor1.isEmpty()) {
+			throw new SyntaxErrorException("Term must begin with a valid factor.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		term.factor.add(factor1.get());
+		while(tm.Peek(0).get().Type == TokenTypes.ASTERISK || tm.Peek(0).get().Type == TokenTypes.SLASH || tm.Peek(0).get().Type == TokenTypes.PERCENT) {
+			if(tm.MatchAndRemove(TokenTypes.ASTERISK).isPresent()) {
+				term.theasteriskORslashORpercent.add(asteriskORslashORpercent.asterisk);
+			}else if(tm.MatchAndRemove(TokenTypes.SLASH).isPresent()) {
+				term.theasteriskORslashORpercent.add(asteriskORslashORpercent.slash);
+			}else if(tm.MatchAndRemove(TokenTypes.PERCENT).isPresent()) {
+				term.theasteriskORslashORpercent.add(asteriskORslashORpercent.percent);
+			}
+			Optional<Factor> newFactor = Factor();
+			if(newFactor.isEmpty()) {
+				throw new SyntaxErrorException("'*' or '/' or '%' token must be followed by a valid factor.", tm.getCurrentLine(), tm.getCurrentColumn());
+			}
+			term.factor.add(newFactor.get());
+		}
+		return Optional.of(term);
+	}
+	
+	public Optional<Factor> Factor() throws SyntaxErrorException{
+		Factor factor = new Factor();
+		Optional<Token> nextToken = tm.Peek(0);
+		switch(nextToken.get().Type) {
+			case NUMBER:
+				factor.number = nextToken.get().Value;
+				factor.$true = false;
+				factor.$false = false;
+				tm.MatchAndRemove(TokenTypes.NUMBER);
+				break;
+			case IDENTIFIER:
+				Optional<VariableReference> variablereference = VariableReference();
+				if(variablereference.isEmpty()) {
+					throw new SyntaxErrorException("Invalid variable reference for a factor.", tm.getCurrentLine(), tm.getCurrentColumn());
+				}
+				factor.variablereference = variablereference;
+				factor.$true = false;
+				factor.$false = false;
+				break;
+			case TRUE:
+				factor.$true = true;
+				factor.$false = false;
+				tm.MatchAndRemove(TokenTypes.TRUE);
+				break;
+			case FALSE:
+				factor.$true = false;
+				factor.$false = true;
+				tm.MatchAndRemove(TokenTypes.FALSE);
+				break;
+			case STRINGLITERAL:
+				factor.stringliteral = nextToken.get().Value;
+				factor.$true = false;
+				factor.$false = false;
+				tm.MatchAndRemove(TokenTypes.STRINGLITERAL);
+				break;
+			case CHARACTERLITERAL:
+				factor.characterliteral = nextToken.get().Value;
+				factor.$true = false;
+				factor.$false = false;
+				tm.MatchAndRemove(TokenTypes.CHARACTERLITERAL);
+				break;
+			case OPENPAREN:
+				tm.MatchAndRemove(TokenTypes.OPENPAREN);
+				Optional<Expression> expression = Expression();
+				if(expression.isEmpty()) {
+					throw new SyntaxErrorException("Invalid expression for a factor.", tm.getCurrentLine(), tm.getCurrentColumn());
+				}
+				factor.expression = expression;
+				factor.$true = false;
+				factor.$false = false;
+				tm.MatchAndRemove(TokenTypes.CLOSEPAREN);
+				break;
+			default:
+				throw new SyntaxErrorException("Factor must start with one of the following: Number, Variable Reference, true, false, String literal, Character literal, or an Expression within parentheses. This factor starts with no valid form of any of these.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		return Optional.of(factor);
 	}
 	
 	public Optional<Loop> Loop(){
@@ -368,12 +469,24 @@ public class PlainEnglishParser {
 		return null;
 	}
 	
-	public Optional<VariableReference> VariableReference(){
-		/*
+	public Optional<VariableReference> VariableReference() throws SyntaxErrorException{
 		VariableReference variablereference = new VariableReference();
+		Optional<Token> name = tm.MatchAndRemove(TokenTypes.IDENTIFIER);
+		if(name.isEmpty()) {
+			throw new SyntaxErrorException("Variable reference must begin with a name.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		variablereference.name = Objects.toString(name.get().Value);
+		if(tm.MatchAndRemove(TokenTypes.OF).isPresent()) {
+			variablereference.of = true;
+			Optional<Token> $object = tm.MatchAndRemove(TokenTypes.IDENTIFIER); 
+			if($object.isEmpty()) {
+				throw new SyntaxErrorException("'OF' token in variable reference must be followed with identifier for object type.", tm.getCurrentLine(), tm.getCurrentColumn());
+			}
+			variablereference.$object = $object.get().Value;
+		}else {
+			variablereference.of = false;
+		}
 		return Optional.of(variablereference);
-		*/
-		return null;
 	}
 }
 
