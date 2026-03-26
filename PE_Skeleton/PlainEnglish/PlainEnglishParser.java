@@ -15,19 +15,17 @@ public class PlainEnglishParser {
 		this.tm = new TokenManager(tokens);
 	}
 	
-	private void RequireNewLine() throws SyntaxErrorException {
-		Optional<Token> lastToken = tm.Peek(tm.getCurrentSize() - 1);
-		if(lastToken.isEmpty()) {
-			throw new SyntaxErrorException("Your program is empty!", tm.getCurrentLine(), tm.getCurrentColumn());
+	private void RequireNewline() throws SyntaxErrorException {
+		if(tm.MatchAndRemove(TokenTypes.NEWLINE).isEmpty()) {
+			throw new SyntaxErrorException("NEWLINE token required.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
-		if(lastToken.get().Type != TokenTypes.NEWLINE) {
-			throw new SyntaxErrorException("NEWLINE token required at end of program.", tm.getCurrentLine(), tm.getCurrentColumn());
+		while(tm.MatchAndRemove(TokenTypes.NEWLINE).isPresent()) {
+			//Do nothing
 		}
 	}
 	
 	public Optional<Program> Program() throws SyntaxErrorException{
 		Program program = new Program();
-		RequireNewLine();
 		while(tm.Peek(0).isPresent()) {
 			if(tm.Peek(0).get().Type == TokenTypes.NEWLINE) {
 				tm.MatchAndRemove(TokenTypes.NEWLINE);
@@ -49,20 +47,14 @@ public class PlainEnglishParser {
 		if(name.isEmpty()) {
 			throw new SyntaxErrorException("TypeDef must have a name.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}else {
-			typedef.name = Objects.toString(name.get().Value);
+			typedef.name = name.get().Value.get();
 		}
 		if(tm.MatchAndRemove(TokenTypes.IS).isEmpty()) {
 			int line = tm.getCurrentLine();
 			int col = tm.getCurrentColumn();
 			throw new SyntaxErrorException("Unexpected Token at: " + line + ", " + col + ". Expected token IS for TypeDef", line, col);
 		}
-		int newlineCount = 0;
-		while(tm.MatchAndRemove(TokenTypes.NEWLINE).isPresent()) {
-			newlineCount++;
-		}
-		if(newlineCount == 0) {
-			throw new SyntaxErrorException("TypeDef must have at least 1 NEWLINE after IS token.", tm.getCurrentLine(), tm.getCurrentColumn());
-		}
+		RequireNewline();
 		if(tm.MatchAndRemove(TokenTypes.INDENT).isEmpty()) {
 			throw new SyntaxErrorException("Must have indent formatting for TypeDef.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
@@ -88,19 +80,13 @@ public class PlainEnglishParser {
 		if(type.isEmpty()) {
 			throw new SyntaxErrorException("Field must have a type.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
-		field.type = Objects.toString(type.get().Value);
+		field.type = type.get().Value.get();
 		Optional<Token> name = tm.MatchAndRemove(TokenTypes.IDENTIFIER);
 		if(name.isEmpty()) {
 			throw new SyntaxErrorException("Field must have a name.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
-		field.name = Objects.toString(name.get().Value);
-		int newlineCount = 0;
-		while(tm.MatchAndRemove(TokenTypes.NEWLINE).isPresent()) {
-			newlineCount++;
-		}
-		if(newlineCount == 0) {
-			throw new SyntaxErrorException("Field must have at least 1 NEWLINE after NAME.", tm.getCurrentLine(), tm.getCurrentColumn());
-		}
+		field.name = name.get().Value.get();
+		RequireNewline();
 		return Optional.of(field);
 	}
 	
@@ -113,7 +99,7 @@ public class PlainEnglishParser {
 		if(name.isEmpty()) {
 			throw new SyntaxErrorException("Method Definition must have a name.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
-		method.name = Objects.toString(name.get().Value);
+		method.name = name.get().Value.get();
 		if(tm.MatchAndRemove(TokenTypes.A).isPresent()) {
 			name = tm.MatchAndRemove(TokenTypes.IDENTIFIER);
 			if(name.isEmpty()) {
@@ -138,13 +124,7 @@ public class PlainEnglishParser {
 		}else {
 			method.with = false;
 		}
-		int newlineCount = 0;
-		while(tm.MatchAndRemove(TokenTypes.NEWLINE).isPresent()) {
-			newlineCount++;
-		}
-		if(newlineCount == 0) {
-			throw new SyntaxErrorException("Method must have at least 1 NEWLINE after definition.", tm.getCurrentLine(), tm.getCurrentColumn());
-		}
+		RequireNewline();
 		Optional<StatementBlock> statementblock = StatementBlock();
 		if(statementblock.isEmpty()) {
 			throw new SyntaxErrorException("Method must have at least one statement.", tm.getCurrentLine(), tm.getCurrentColumn());
@@ -159,7 +139,7 @@ public class PlainEnglishParser {
 		if(paramType.isEmpty()) {
 			throw new SyntaxErrorException("Parameter must have a type.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
-		parameter.paramType = Objects.toString(paramType.get().Value);
+		parameter.paramType = paramType.get().Value.get();
 		if(tm.MatchAndRemove(TokenTypes.NAMED).isPresent()) {
 			parameter.named = true;
 			Optional<Token> name = tm.MatchAndRemove(TokenTypes.IDENTIFIER);
@@ -189,15 +169,15 @@ public class PlainEnglishParser {
 	
 	public Optional<Statement> Statement() throws SyntaxErrorException {
 		Statement statement = new Statement();
-		if(tm.Peek(1).get().Type == TokenTypes.IF) {
+		if(tm.Peek(0).get().Type == TokenTypes.IF) {
 			statement.$if = If();
-		}else if(tm.Peek(1).get().Type == TokenTypes.LOOP) {
+		}else if(tm.Peek(0).get().Type == TokenTypes.LOOP) {
 			statement.loop = Loop();
-		}else if(tm.Peek(1).get().Type == TokenTypes.SET) {
+		}else if(tm.Peek(0).get().Type == TokenTypes.SET) {
 			statement.set = Set();
-		}else if(tm.Peek(1).get().Type == TokenTypes.MAKE) {
+		}else if(tm.Peek(0).get().Type == TokenTypes.MAKE) {
 			statement.make = Make();
-		}else if(tm.Peek(1).get().Type == TokenTypes.IDENTIFIER) {
+		}else if(tm.Peek(0).get().Type == TokenTypes.IDENTIFIER) {
 			statement.functioncall = FunctionCall();
 		}else {
 			throw new SyntaxErrorException("No valid statement tokens: If, Loop, Set, Make or Function Call", tm.getCurrentLine(), tm.getCurrentColumn());
@@ -217,13 +197,7 @@ public class PlainEnglishParser {
 			throw new SyntaxErrorException("If statement needs Boolean expression after start.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
 		$if.boolexpterm = boolExpTerm.get();
-		int newlineCount = 0;
-		while(tm.MatchAndRemove(TokenTypes.NEWLINE).isPresent()) {
-			newlineCount++;
-		}
-		if(newlineCount == 0) {
-			throw new SyntaxErrorException("If statement must have at least 1 NEWLINE after definition.", tm.getCurrentLine(), tm.getCurrentColumn());
-		}
+		RequireNewline();
 		Optional<StatementBlock> statementblock = StatementBlock();
 		if(statementblock.isEmpty()) {
 			throw new SyntaxErrorException("If statement must have at least one statement in block.", tm.getCurrentLine(), tm.getCurrentColumn());
@@ -427,13 +401,7 @@ public class PlainEnglishParser {
 			throw new SyntaxErrorException("Set statement much have an expression to assign variable to.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
 		set.expression = expression.get();
-		int newlineCount = 0;
-		while (tm.MatchAndRemove(TokenTypes.NEWLINE).isPresent()) {
-			newlineCount++;
-		}
-		if (newlineCount == 0) {
-			throw new SyntaxErrorException("Set statement must be followed by at least 1 NEWLINE token.", tm.getCurrentLine(), tm.getCurrentColumn());
-		}
+		RequireNewline();
 		return Optional.of(set);
 	}
 	
@@ -446,7 +414,7 @@ public class PlainEnglishParser {
 		if(type.isEmpty()) {
 			throw new SyntaxErrorException("Make statement must have a declared type.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
-		make.type = Objects.toString(type.get().Value);
+		make.type = type.get().Value.get();
 		if(tm.MatchAndRemove(TokenTypes.NAMED).isEmpty()) {
 			throw new SyntaxErrorException("Make statement must have a name for object being made.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
@@ -454,14 +422,8 @@ public class PlainEnglishParser {
 		if(name.isEmpty()) {
 			throw new SyntaxErrorException("No name given for object to be made.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
-		make.name = Objects.toString(name.get().Value);
-		int newlineCount = 0;
-		while (tm.MatchAndRemove(TokenTypes.NEWLINE).isPresent()) {
-			newlineCount++;
-		}
-		if (newlineCount == 0) {
-			throw new SyntaxErrorException("Make statement must be followed by at least 1 NEWLINE token.", tm.getCurrentLine(), tm.getCurrentColumn());
-		}
+		make.name = name.get().Value.get();
+		RequireNewline();
 		return Optional.of(make);
 	}
 	
@@ -475,7 +437,7 @@ public class PlainEnglishParser {
 		if(name.isEmpty()) {
 			throw new SyntaxErrorException("Variable reference must begin with a name.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
-		variablereference.name = Objects.toString(name.get().Value);
+		variablereference.name = name.get().Value.get();
 		if(tm.MatchAndRemove(TokenTypes.OF).isPresent()) {
 			variablereference.of = true;
 			Optional<Token> $object = tm.MatchAndRemove(TokenTypes.IDENTIFIER); 

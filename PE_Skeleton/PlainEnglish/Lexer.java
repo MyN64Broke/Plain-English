@@ -1,7 +1,7 @@
 package PlainEnglish;
-import java.util.ArrayList;
 import java.util.EmptyStackException;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Stack;
 
 import PlainEnglish.Token.TokenTypes;
@@ -49,30 +49,30 @@ public class Lexer    {
         PuncMap.put("<", TokenTypes.LESSTHAN);
     }
     
-    public void lex() throws SyntaxErrorException {
+    public LinkedList<Token> lex() throws SyntaxErrorException {
+    	LinkedList<Token> tokens = new LinkedList<Token>();
     	indentation.push(0);
-    	ArrayList<Token> ListOfTokens = new ArrayList<Token>();
     	while(!tm.isAtEnd()) {
     		char C = tm.getCharacter();
     		int line = tm.getLine();
     		int col = tm.getCol();
     		if(Character.isLetter(C)) {
-    			ListOfTokens.add(readWord());
+    			tokens.add(readWord());
     		}else if(Character.isDigit(C)) {
-				ListOfTokens.add(readNumber());
+				tokens.add(readNumber());
     		}else if(PuncMap.containsKey(Character.toString(C))) {
-    			ListOfTokens.add(readPunctuation());
+    			tokens.add(readPunctuation());
     		}else if(C == '\n') {
     			Token newline = new Token(TokenTypes.NEWLINE, line, col, Character.toString(C));
-    			ListOfTokens.add(newline);
+    			tokens.add(newline);
     			tm.newline();
     			if(!tm.isAtEnd(1)) {
-    				ListOfTokens.addAll(readWhitespace());
+    				tokens.addAll(readWhitespace());
     			}
     		}else if(C == '"') {
     			int balance = balancedQuotes(C);
     			if(balance > 0) {
-    				ListOfTokens.add(readLiteral(balance, C));
+    				tokens.add(readLiteral(balance, C));
     			}else {
     				throw new SyntaxErrorException("Unbalanced quotation marks at: " + line + ", " + col, line, col);
     			}
@@ -81,7 +81,7 @@ public class Lexer    {
     			if(balance > 3) {
     				throw new SyntaxErrorException("Character too long: " + tm.getLine() + ", " + tm.getCol(), tm.getLine(), tm.getCol());
     			}else if(balance > 0){
-    				ListOfTokens.add(readLiteral(balance, C));
+    				tokens.add(readLiteral(balance, C));
     			}else {
     				throw new SyntaxErrorException("Unbalanced apostrophes at " + line + ", " + col, line, col);
     			}
@@ -95,11 +95,12 @@ public class Lexer    {
     			throw new SyntaxErrorException("It looks like you have an unusable character at: " + line + ", " + col, line, col);
     		}
     	}
-    	ListOfTokens.add(new Token(TokenTypes.NEWLINE, tm.getLine(), tm.getCol() + 1, "/n"));
+    	tokens.add(new Token(TokenTypes.NEWLINE, tm.getLine(), tm.getCol() + 1, "/n"));
     	while(!indentation.isEmpty()) {
     		indentation.pop();
-    		ListOfTokens.add(new Token(TokenTypes.DEDENT, tm.getLine(), 0));
+    		tokens.add(new Token(TokenTypes.DEDENT, tm.getLine(), 0));
     	}
+    	return tokens;
     }
     
     private Token readWord() throws SyntaxErrorException {
@@ -221,8 +222,8 @@ public class Lexer    {
 		}
     }
     
-    private ArrayList<Token> readWhitespace() throws SyntaxErrorException {
-    	ArrayList<Token> tokens = new ArrayList<Token>();
+    private LinkedList<Token> readWhitespace() throws SyntaxErrorException {
+    	LinkedList<Token> indentationTokens = new LinkedList<Token>();
     	int indent = 0;
 		while(tm.getCharacter() == ' ' || tm.getCharacter() == '\t') {
 			char C = tm.getCharacter();
@@ -240,19 +241,19 @@ public class Lexer    {
 		if(indent > indentation.peek()) {
 			indentation.push(indent);
 			Token token = new Token(TokenTypes.INDENT, tm.getLine(), tm.getCol());
-			tokens.add(token);
+			indentationTokens.add(token);
 		}else if(indent < indentation.peek()) {
 			try {
 				while(indent != indentation.peek()) {
 					indentation.pop();
 					Token token = new Token(TokenTypes.DEDENT, tm.getLine(), tm.getCol());
-					tokens.add(token);
+					indentationTokens.add(token);
 				}
 			}catch(Exception EmptyStackException) {
 				throw new SyntaxErrorException("Improper indentation at: " + tm.getLine() + ", " + tm.getCol(), tm.getLine(), tm.getCol());
 			}
 		}
-		return tokens;
+		return indentationTokens;
     }
     
     private int balancedQuotes(char start) {
