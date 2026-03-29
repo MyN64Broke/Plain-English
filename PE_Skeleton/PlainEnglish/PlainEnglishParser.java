@@ -1,7 +1,6 @@
 package PlainEnglish;
 
 import java.util.LinkedList;
-import java.util.Objects;
 import java.util.Optional;
 
 import PlainEnglish.Token.TokenTypes;
@@ -34,6 +33,27 @@ public class PlainEnglishParser {
 			}else if(tm.Peek(0).get().getType() == TokenTypes.TO) {
 				program.method.add(Method().get());
 			}
+			//Potential setup for what the program would look like
+			//If more it was more reliant upon Opitional.empty()
+			/*
+			while(true) {
+				if(tm.Peek(0).get().Type == TokenTypes.NEWLINE) {
+					tm.MatchAndRemove(TokenTypes.NEWLINE);
+					break;
+				}
+				Optional<TypeDef> typedef = TypeDef();
+				if(typedef.isPresent()) {
+					program.typedef.add(typedef.get());
+					break;
+				}
+				Optional<Method> method = Method();
+				if(method.isPresent()) {
+					program.method.add(method.get());
+					break;
+				}
+				throw new SyntaxErrorException("This token does not constitute valid syntax for a TypeDef, Method or Newline.", tm.getCurrentLine(), tm.getCurrentColumn());
+			}
+			*/
 		}
 		return Optional.of(program);
 	}

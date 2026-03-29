@@ -1,8 +1,6 @@
 package PlainEnglish;
-import java.util.EmptyStackException;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Stack;
 
 import PlainEnglish.Token.TokenTypes;
 
@@ -11,10 +9,12 @@ public class Lexer    {
 	private final TextManager tm;
 	private HashMap<String, TokenTypes> WordMap;
 	private HashMap<String, TokenTypes> PuncMap;
-	private Stack<Integer> indentation = new Stack<>();
+	private LinkedList<Token> tokens = new LinkedList<Token>();
 	
     public Lexer(String input) {
         tm = new TextManager(input);
+        WordMap = new HashMap<String, TokenTypes>();
+        PuncMap = new HashMap<String, TokenTypes>();
         WordMap.put("to", TokenTypes.TO);
         WordMap.put("a", TokenTypes.A);
         WordMap.put("with", TokenTypes.WITH);
@@ -32,6 +32,23 @@ public class Lexer    {
         WordMap.put("and", TokenTypes.AND);
         WordMap.put("or", TokenTypes.OR);
         WordMap.put("not", TokenTypes.NOT);
+        WordMap.put("To", TokenTypes.TO);
+        WordMap.put("A", TokenTypes.A);
+        WordMap.put("With", TokenTypes.WITH);
+        WordMap.put("Named", TokenTypes.NAMED);
+        WordMap.put("An", TokenTypes.AN);
+        WordMap.put("Is", TokenTypes.IS);
+        WordMap.put("If", TokenTypes.IF);
+        WordMap.put("Else", TokenTypes.ELSE);
+        WordMap.put("Loop", TokenTypes.LOOP);
+        WordMap.put("Set", TokenTypes.SET);
+        WordMap.put("Make", TokenTypes.MAKE);
+        WordMap.put("Of", TokenTypes.OF);
+        WordMap.put("True", TokenTypes.TRUE);
+        WordMap.put("False", TokenTypes.FALSE);
+        WordMap.put("And", TokenTypes.AND);
+        WordMap.put("Or", TokenTypes.OR);
+        WordMap.put("Not", TokenTypes.NOT);
         PuncMap.put(",", TokenTypes.COMMA);
         PuncMap.put("+", TokenTypes.PLUS);
         PuncMap.put("=", TokenTypes.ASSIGN);
@@ -50,8 +67,7 @@ public class Lexer    {
     }
     
     public LinkedList<Token> lex() throws SyntaxErrorException {
-    	LinkedList<Token> tokens = new LinkedList<Token>();
-    	indentation.push(0);
+    	int indentation = 0;
     	while(!tm.isAtEnd()) {
     		char C = tm.getCharacter();
     		int line = tm.getLine();
@@ -60,14 +76,19 @@ public class Lexer    {
     			tokens.add(readWord());
     		}else if(Character.isDigit(C)) {
 				tokens.add(readNumber());
-    		}else if(PuncMap.containsKey(Character.toString(C))) {
+    		}else if(C == '/' && (!tm.isAtEnd(1) && (tm.peekCharacter() == '/' || tm.peekCharacter() == '*'))) {
+    			if(!tm.isAtEnd(1)) {
+    				readComments();
+    			}else {
+    				throw new SyntaxErrorException("Erroneous / at end of text. Remove it. Now.", line, col);
+    			}
+    		}else if(PuncMap.containsKey(Character.toString(C)) || ( !tm.isAtEnd(1) && PuncMap.containsKey(Character.toString(C) + Character.toString(tm.peekCharacter())))) {
     			tokens.add(readPunctuation());
     		}else if(C == '\n') {
-    			Token newline = new Token(TokenTypes.NEWLINE, line, col, Character.toString(C));
-    			tokens.add(newline);
+    			tokens.add(new Token(TokenTypes.NEWLINE, line, col, Character.toString(C)));
     			tm.newline();
     			if(!tm.isAtEnd(1)) {
-    				tokens.addAll(readWhitespace());
+    				indentation = readWhitespace(indentation);
     			}
     		}else if(C == '"') {
     			int balance = balancedQuotes(C);
@@ -85,42 +106,40 @@ public class Lexer    {
     			}else {
     				throw new SyntaxErrorException("Unbalanced apostrophes at " + line + ", " + col, line, col);
     			}
-    		}else if(C == '/') {
-    			if(!tm.isAtEnd(1)) {
-    				readComments();
-    			}else {
-    				throw new SyntaxErrorException("Erroneous / at end of text. Remove it. Now.", line, col);
-    			}
+    		}else if(C == ' ') {
+    			tm.increment();
     		}else {
     			throw new SyntaxErrorException("It looks like you have an unusable character at: " + line + ", " + col, line, col);
     		}
     	}
-    	tokens.add(new Token(TokenTypes.NEWLINE, tm.getLine(), tm.getCol() + 1, "/n"));
-    	while(!indentation.isEmpty()) {
-    		indentation.pop();
-    		tokens.add(new Token(TokenTypes.DEDENT, tm.getLine(), 0));
+    	while(indentation > 0) {
+    		tokens.add(new Token(TokenTypes.DEDENT, tm.getLine(), tm.getCol()));
+    		indentation--;
     	}
+    	tokens.add(new Token(TokenTypes.NEWLINE, tm.getLine(), tm.getCol() + 1, "/n"));
     	return tokens;
     }
     
     private Token readWord() throws SyntaxErrorException {
-    	Token token;
-    	String buffer = "";
     	int line = tm.getLine();
     	int col = tm.getCol();
+    	String buffer = "";
+    	Token token = new Token(TokenTypes.IDENTIFIER, line, col, buffer);
     	while(tm.getCharacter() != ' ') {
+    		line = tm.getLine();
+    		col = tm.getCol();
     		char C = tm.getCharacter();
-    		if(PuncMap.containsKey(Character.toString(C))) {
-    			throw new SyntaxErrorException("Reserved symbol in word at: " + line + ", " + col, line, col);
+    		if(tm.getCharacter() == '\n' || PuncMap.containsKey(Character.toString(C))) {
+    			break;
     		}else {
-	    		buffer += tm.getCharacter();
+	    		buffer += C;
 	    		if(!tm.isAtEnd()) {
 	    			tm.increment();
 	    		}
     		}
     	}
     	if(WordMap.containsKey(buffer)) {
-    		token = new Token(WordMap.get(buffer), line, col, buffer);
+    		token = new Token(WordMap.get(buffer), line, col);
     	}else {
     		token = new Token(TokenTypes.IDENTIFIER, line, col, buffer);
     	}
@@ -150,22 +169,23 @@ public class Lexer    {
     private Token readPunctuation() throws SyntaxErrorException {
     	Token puncToken;
     	String buffer = Character.toString(tm.getCharacter());
+    	int line = tm.getLine();
+    	int col = tm.getCol();
     	if(tm.isAtEnd(1)) {
-    		puncToken = new Token(PuncMap.get(buffer), tm.getLine(), tm.getCol(), buffer);
+    		puncToken = new Token(PuncMap.get(buffer), line, col);
     	}else {
 	    	char peek = tm.peekCharacter();
 	    	if(PuncMap.containsKey(buffer + Character.toString(peek))) {
 	    		buffer += Character.toString(peek);
-	    		puncToken = new Token(PuncMap.get(buffer), tm.getLine(), tm.getCol(), buffer);
+	    		puncToken = new Token(PuncMap.get(buffer), line, col);
 	    		tm.increment();
 	    		if(!tm.isAtEnd()) {
 	    			tm.increment();
 	    		}
-	    	}else if(!(Character.isLetter(peek) || Character.isDigit(peek) || peek == ' ')) {
-	    		buffer += Character.toString(peek);
-	    		throw new SyntaxErrorException("Invalid punctuation syntax: " + buffer + " at: " + tm.getLine() + ", " + tm.getCol(), tm.getLine(), tm.getCol());
+	    	}else if(!(Character.isLetter(peek) || Character.isDigit(peek) || peek == ' ' || peek == '\n')) {
+	    		return puncToken = new Token(PuncMap.get(buffer), line, col);
 	    	}else {
-	    		puncToken = new Token(PuncMap.get(buffer), tm.getLine(), tm.getCol(), buffer);
+	    		puncToken = new Token(PuncMap.get(buffer), tm.getLine(), tm.getCol());
 	    		tm.increment();
 	    	}
     	}
@@ -173,16 +193,16 @@ public class Lexer    {
     }
     
     private Token readLiteral(int numChars, char type) {
-    	String buffer = Character.toString(tm.getCharacter());
+    	tm.increment();
+    	String buffer = "";
     	int line = tm.getLine();
     	int col = tm.getCol();
-    	//This for loop is the one mentioned in the comments inside balancedQuotes.
     	for(int i = 0; i < numChars; i++) {
-    		buffer += tm.peekCharacter();
+    		buffer += tm.getCharacter();
     		tm.increment();
     	}
     	if(!tm.isAtEnd()) {
-    		tm.increment(); //This loop is peeking for the characters to add so it needs an extra increment
+    		tm.increment();
     	}
     	Token token;
     	if(type == '"') {
@@ -212,6 +232,7 @@ public class Lexer    {
 					C = tm.getCharacter();
 					if(C == '*' && !tm.isAtEnd() && tm.peekCharacter() == '/') {
 						tm.increment();
+						tm.increment();
 						return;
 					}
 					if(!tm.isAtEnd()) {
@@ -222,38 +243,36 @@ public class Lexer    {
 		}
     }
     
-    private LinkedList<Token> readWhitespace() throws SyntaxErrorException {
-    	LinkedList<Token> indentationTokens = new LinkedList<Token>();
+    private int readWhitespace(int currentIndent) throws SyntaxErrorException {
     	int indent = 0;
-		while(tm.getCharacter() == ' ' || tm.getCharacter() == '\t') {
-			char C = tm.getCharacter();
-			if(C == ' ') {
-				indent++;
-			}else {
-				indent += 4;
-			}
-			if(!tm.isAtEnd()) {
-				tm.increment();
-			}else {
-				break;
-			}
-		}
-		if(indent > indentation.peek()) {
-			indentation.push(indent);
-			Token token = new Token(TokenTypes.INDENT, tm.getLine(), tm.getCol());
-			indentationTokens.add(token);
-		}else if(indent < indentation.peek()) {
-			try {
-				while(indent != indentation.peek()) {
-					indentation.pop();
-					Token token = new Token(TokenTypes.DEDENT, tm.getLine(), tm.getCol());
-					indentationTokens.add(token);
-				}
-			}catch(Exception EmptyStackException) {
-				throw new SyntaxErrorException("Improper indentation at: " + tm.getLine() + ", " + tm.getCol(), tm.getLine(), tm.getCol());
-			}
-		}
-		return indentationTokens;
+    	if(tm.getCharacter() == '\n') {
+    		return currentIndent;
+    	}
+    	while(tm.getCharacter() == ' ' || tm.getCharacter() == '\t') {
+    		if(!tm.isAtEnd(4) && tm.getCharacter() == ' ' && tm.peekCharacter() == ' ' && tm.peekCharacter(2) == ' ' && tm.peekCharacter(3) == ' ') {
+    			indent++;
+    			tm.increment();
+    			tm.increment();
+    			tm.increment();
+    			tm.increment();
+    		}else if(tm.getCharacter() == '\t') {
+    			indent++;
+    			tm.increment();
+    		}else{
+    			throw new SyntaxErrorException("Incorrect number of spaces to start new line.", tm.getLine(), tm.getCol());
+    		}
+    	}
+    	if(indent > currentIndent + 1) {
+    		throw new SyntaxErrorException("Too much indentation for new line based on indentation of last line.", tm.getLine(), tm.getCol());
+    	}else if(indent == currentIndent + 1) {
+    		tokens.add(new Token(TokenTypes.INDENT, tm.getLine(), tm.getCol()));
+    	}else if(indent < currentIndent) {
+    		while(indent < currentIndent) {
+    			tokens.add(new Token(TokenTypes.DEDENT, tm.getLine(), tm.getCol()));
+    			currentIndent--;
+    		}
+    	}
+    	return indent;
     }
     
     private int balancedQuotes(char start) {
@@ -270,7 +289,7 @@ public class Lexer    {
 	    	if(!tm.isAtEnd(i)){
 		   		char C = tm.peekCharacter(i + 1);
 		    	if(C == start) {
-		    		return i + 1;
+		    		return i;
 		    	}
 	    	}
 	    }

@@ -9,7 +9,7 @@ public class TextManager
 
     public TextManager(String input)
     {
-    	position = 1;
+    	position = 0;
         positionCol = 1;
         positionLine = 1;
         text = input;
@@ -53,7 +53,7 @@ public class TextManager
     
     public void newline() {
     	position++;
-    	positionCol = 0;
+    	positionCol = 1;
     	positionLine++;
     }
     
