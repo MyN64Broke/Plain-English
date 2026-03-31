@@ -18,9 +18,7 @@ public class PlainEnglishParser {
 		if(tm.MatchAndRemove(TokenTypes.NEWLINE).isEmpty()) {
 			throw new SyntaxErrorException("NEWLINE token required.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
-		while(tm.MatchAndRemove(TokenTypes.NEWLINE).isPresent()) {
-			//Do nothing
-		}
+		while(tm.MatchAndRemove(TokenTypes.NEWLINE).isPresent());
 	}
 	
 	public Optional<Program> Program() throws SyntaxErrorException{
@@ -137,7 +135,7 @@ public class PlainEnglishParser {
 			while(tm.MatchAndRemove(TokenTypes.COMMA).isPresent()) {
 				parameter = Parameter();
 				if(parameter.isEmpty()) {
-					throw new SyntaxErrorException("Parameter must follow a ','.", tm.getCurrentLine(), tm.getCurrentColumn());
+					throw new SyntaxErrorException("COMMA token must be followed by a valid expression in method parameters.", tm.getCurrentLine(), tm.getCurrentColumn());
 				}
 				method.parameter.add(parameter.get());
 			}
@@ -206,7 +204,6 @@ public class PlainEnglishParser {
 	}
 	
 	public Optional<If> If() throws SyntaxErrorException{
-		/*
 		If $if = new If();
 		if(tm.MatchAndRemove(TokenTypes.IF).isEmpty()) {
 			//How we get here, I don't know
@@ -234,15 +231,12 @@ public class PlainEnglishParser {
 			}
 			$if.falseCase = statementblock;	
 		}else{
-			$is.$else = false;
+			$if.$else = false;
 		}
 		return Optional.of($if);
-		*/
-		return null;
 	}
 	
 	public Optional<BoolExpTerm> BoolExpTerm() throws SyntaxErrorException{
-		/*
 		BoolExpTerm boolexpterm = new BoolExpTerm();
 		Optional<BoolExpFactor> boolexpfactor = BoolExpFactor();
 		if(boolexpfactor.isEmpty()) {
@@ -274,25 +268,54 @@ public class PlainEnglishParser {
 			throw new SyntaxErrorException("Boolean expression factor must be followed by one of the following: and, or, not.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
 		return Optional.of(boolexpterm);
-		*/
-		return null;
 	}
 	
 	public Optional<BoolExpFactor> BoolExpFactor() throws SyntaxErrorException{
-		/*
 		BoolExpFactor boolexpfactor = new BoolExpFactor();
-		if(tm.Peek(0).get().Type == ) {
-			
+		int i = 0;
+		boolean isExpression = false;
+		while(tm.Peek(i).get().Type != TokenTypes.NEWLINE && !isExpression) {
+			switch(tm.Peek(i).get().Type) {
+				case DOUBLEEQUAL, NOTEQUAL, LESSTHANEQUAL, GREATERTHANEQUAL, LESSTHAN, GREATERTHAN:
+					isExpression = true;
+					break;
+				default:
+					i++;
+					break;
+			}
 		}
-		Optional<Expression> expression = Expression();
-		if(expression.isEmpty()) {
-			throw new SyntaxErrorException("Boolean expression factor must start with an expression.", tm.getCurrentLine(), tm.getCurrentColumn());
+		if(isExpression) {
+			Optional<Expression> expression = Expression();
+			if(expression.isEmpty()) {
+				throw new SyntaxErrorException("Boolean expression factor must start with expression if doing comparison.", tm.getCurrentLine(), tm.getCurrentColumn());
+			}
+			boolexpfactor.lhs = expression;
+			if(tm.MatchAndRemove(TokenTypes.DOUBLEEQUAL).isPresent()) {
+				boolexpfactor.thecompareOps = Optional.of(compareOps.doubleequal);
+			}else if(tm.MatchAndRemove(TokenTypes.NOTEQUAL).isPresent()) {
+				boolexpfactor.thecompareOps = Optional.of(compareOps.notequal);
+			}else if(tm.MatchAndRemove(TokenTypes.LESSTHANEQUAL).isPresent()) {
+				boolexpfactor.thecompareOps = Optional.of(compareOps.lessthanequal);
+			}else if(tm.MatchAndRemove(TokenTypes.GREATERTHANEQUAL).isPresent()) {
+				boolexpfactor.thecompareOps = Optional.of(compareOps.greaterthanequal);
+			}else if(tm.MatchAndRemove(TokenTypes.LESSTHAN).isPresent()) {
+				boolexpfactor.thecompareOps = Optional.of(compareOps.lessthan);
+			}else if(tm.MatchAndRemove(TokenTypes.GREATERTHANEQUAL).isPresent()) {
+				boolexpfactor.thecompareOps = Optional.of(compareOps.greaterthan);
+			}
+			expression = Expression();
+			if(expression.isEmpty()) {
+				throw new SyntaxErrorException("Expression must be compared with another expression.", tm.getCurrentLine(), tm.getCurrentColumn());
+			}
+			boolexpfactor.rhs = expression;
+		}else {
+			Optional<VariableReference> varref = VariableReference();
+			if(varref.isEmpty()) {
+				throw new SyntaxErrorException("Improper variable reference for boolean expression.", tm.getCurrentLine(), tm.getCurrentColumn());
+			}
+			boolexpfactor.variablereference = varref;
 		}
-		boolexpfactor.lhs = expression;
-		
 		return Optional.of(boolexpfactor);
-		*/
-		return null;
 	}
 	
 	public Optional<Expression> Expression() throws SyntaxErrorException{
@@ -399,8 +422,23 @@ public class PlainEnglishParser {
 		return Optional.of(factor);
 	}
 	
-	public Optional<Loop> Loop(){
-		return null;
+	public Optional<Loop> Loop() throws SyntaxErrorException{
+		Loop loop = new Loop();
+		if(tm.MatchAndRemove(TokenTypes.LOOP).isEmpty()) {
+			return Optional.empty();
+		}
+		Optional<BoolExpTerm> boolexpterm = BoolExpTerm();
+		if(boolexpterm.isEmpty()) {
+			throw new SyntaxErrorException("Loop must start with boolean expression.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		loop.boolexpterm = boolexpterm.get();
+		RequireNewline();
+		Optional<StatementBlock> stateblock = StatementBlock();
+		if(stateblock.isEmpty()) {
+			throw new SyntaxErrorException("Loop must have a statement block.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		loop.statementblock = stateblock.get();
+		return Optional.of(loop);
 	}
 	
 	public Optional<Set> Set() throws SyntaxErrorException {
@@ -447,8 +485,33 @@ public class PlainEnglishParser {
 		return Optional.of(make);
 	}
 	
-	public Optional<FunctionCall> FunctionCall(){
-		return null;
+	public Optional<FunctionCall> FunctionCall() throws SyntaxErrorException{
+		FunctionCall funccall = new FunctionCall();
+		Optional<Token> name = tm.MatchAndRemove(TokenTypes.IDENTIFIER);
+		if(name.isEmpty()) {
+			return Optional.empty();
+		}
+		funccall.name = name.get().Value.get();
+		Optional<Token> obj = tm.MatchAndRemove(TokenTypes.IDENTIFIER);
+		if(obj.isPresent()) {
+			funccall.obj = obj.get().Value;
+		}
+		if(tm.MatchAndRemove(TokenTypes.WITH).isPresent()) {
+			Optional<Expression> expression = Expression();
+			if(expression.isEmpty()) {
+				throw new SyntaxErrorException("WITH token must be followed by a valid expression.", tm.getCurrentLine(), tm.getCurrentColumn());
+			}
+			funccall.parameter.add(expression.get());
+			while(tm.MatchAndRemove(TokenTypes.COMMA).isPresent()) {
+				expression = Expression();
+				if(expression.isEmpty()) {
+					throw new SyntaxErrorException("COMMA token must be followed by a valid expression in function call parameters.", tm.getCurrentLine(), tm.getCurrentColumn());
+				}
+				funccall.parameter.add(expression.get());
+			}
+		}
+		RequireNewline();
+		return Optional.of(funccall);
 	}
 	
 	public Optional<VariableReference> VariableReference() throws SyntaxErrorException{
