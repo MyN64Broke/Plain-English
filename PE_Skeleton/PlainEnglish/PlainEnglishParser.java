@@ -264,8 +264,6 @@ public class PlainEnglishParser {
 				throw new SyntaxErrorException("NOT token must be followed by boolean expression term.", tm.getCurrentLine(), tm.getCurrentColumn());
 			}
 			boolexpterm.notTerm = notTerm;
-		}else {
-			throw new SyntaxErrorException("Boolean expression factor must be followed by one of the following: and, or, not.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
 		return Optional.of(boolexpterm);
 	}

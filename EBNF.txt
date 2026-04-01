@@ -33,4 +33,3 @@ Factor = NUMBER | VariableReference | "true" | "false" | STRINGLITERAL | CHARACT
 BoolExpTerm =  BoolExpFactor (("and"|"or") BoolExpTerm)* | "not" {notTerm}BoolExpTerm
 
 BoolExpFactor = ({lhs}Expression {compareOps}( "==" | "!=" | "<=" | ">=" | ">" | "<" ) {rhs}Expression) | VariableReference
-
