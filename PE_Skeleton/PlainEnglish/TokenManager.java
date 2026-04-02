@@ -26,7 +26,7 @@ public class TokenManager
     }
     
     Optional<Token> Peek(int distance){
-    	if(tokens.size() > 0) {
+    	if(tokens.size() > distance) {
     		return Optional.of(tokens.get(distance));
     	}else {
     		return Optional.empty();

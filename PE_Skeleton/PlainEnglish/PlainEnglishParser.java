@@ -31,10 +31,12 @@ public class PlainEnglishParser {
 			}else if(tm.Peek(0).get().getType() == TokenTypes.TO) {
 				program.method.add(Method().get());
 			}
+		}
+		
 			//Potential setup for what the program would look like
 			//If more it was more reliant upon Opitional.empty()
-			/*
-			while(true) {
+		/*
+			while(tm.Peek(0).isPresent()) {
 				if(tm.Peek(0).get().Type == TokenTypes.NEWLINE) {
 					tm.MatchAndRemove(TokenTypes.NEWLINE);
 					break;
@@ -51,8 +53,7 @@ public class PlainEnglishParser {
 				}
 				throw new SyntaxErrorException("This token does not constitute valid syntax for a TypeDef, Method or Newline.", tm.getCurrentLine(), tm.getCurrentColumn());
 			}
-			*/
-		}
+		*/
 		return Optional.of(program);
 	}
 	

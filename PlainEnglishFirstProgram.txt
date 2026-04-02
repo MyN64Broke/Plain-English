@@ -1,0 +1,31 @@
+A student is
+    firstName
+    lastName
+    firstGrade
+    secondGrade
+    thirdGrade
+To Create a Student with string named name1, string named name2, number named grade1, number named grade2, number named grade3
+    Set firstName to name1
+    Set lastName to name2
+    Set firstGrade to grade1
+    Set secondGrade to grade2
+    Set thirdGrade to grade3
+To getAverage a Student with number named average
+    average = (firstGrade + secondGrade + thirdGrade)/3
+To print with Student
+    Sysout with firstName
+    Sysout with lastName
+    Make number named average
+    getAverage with average
+    Sysout with average
+To run
+    Make student named Student1
+    Make student named Student3
+    Make student named Student3
+    Create with Student1, "John", "Smith", 2, 3, 4
+    Create with Student1, "Johnny", "Smithson", 3, 4, 5
+    Create with Student1, "Johnathan", "Smithsonian", 4, 5, 6
+    print with Student1
+    print with Student2
+    print with Student3
+    
