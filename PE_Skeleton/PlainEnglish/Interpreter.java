@@ -21,6 +21,16 @@ public class Interpreter {
     public void Start() {
     	PrintBuiltInMethod print = new PrintBuiltInMethod();
     	program.method.add(print);
+    	Method run = null;
+    	for(Method method : program.method) {
+    		if(method.name.equals("Run")) {
+    			run = method;
+    		}
+    	}
+    	if(run == null) {
+    		throw new RuntimeException("No Run function found in program. Unable to run.");
+    	}
+    	processMethod(run, variables, null);
     }
     
     InterpreterDataType processMethod(Method method, HashMap<String, InterpreterDataType> params, InterpreterDataType obj) {
@@ -174,7 +184,7 @@ public class Interpreter {
     				break;
     			default:
     				for(TypeDef typedef : program.typedef) {
-    					if(typedef.name == makeStatement.name) {
+    					if(typedef.name.equals(makeStatement.name)) {
     						ObjectInterpreterDataType newObject = new ObjectInterpreterDataType(); 
     						newObject = makeObjectVariable(newObject, typedef);
     						scope.put(s.make.get().name, newObject);
@@ -199,7 +209,7 @@ public class Interpreter {
 				return scope;
     		}
     		for(Method method : program.method) {
-    			if(method.name == funcCall.name) {
+    			if(method.name.equals(funcCall.name)) {
     				HashMap<String, InterpreterDataType> params = new HashMap<>();
     				int i = 0;
     				for(Expression e : funcCall.parameter) {
@@ -607,7 +617,7 @@ public class Interpreter {
 					break;
 				default:
 					for(TypeDef fieldTypedef : program.typedef) {
-    					if(fieldTypedef.name == typedef.name) {
+    					if(fieldTypedef.name.equals(typedef.name)) {
     						ObjectInterpreterDataType newFieldObject = new ObjectInterpreterDataType(); 
     						newFieldObject = makeObjectVariable(newFieldObject, fieldTypedef);
     						newObject.fields.put(field.name, newFieldObject);

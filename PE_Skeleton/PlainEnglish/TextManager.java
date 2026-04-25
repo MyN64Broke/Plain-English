@@ -12,7 +12,7 @@ public class TextManager
     	position = 0;
         positionCol = 1;
         positionLine = 1;
-        text = input;
+        text = input.concat("\n");
     }
 
     public boolean isAtEnd() {
@@ -67,6 +67,10 @@ public class TextManager
     
     public int getRemaining() {
     	return text.length() - position;
+    }
+    
+    public void adjustColForIndent() {
+    	positionCol += 3;
     }
 }
 

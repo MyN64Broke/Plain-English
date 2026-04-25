@@ -74,6 +74,10 @@ public class PlainEnglishParser {
 			throw new SyntaxErrorException("Unexpected Token at: " + line + ", " + col + ". Expected token IS for TypeDef", line, col);
 		}
 		RequireNewline();
+		if(!(tm.Peek(0).get().Type == TokenTypes.INDENT)) {
+			throw new SyntaxErrorException("TypeDef block must have indent.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		while(tm.MatchAndRemove(TokenTypes.INDENT).isPresent());
 		if(tm.MatchAndRemove(TokenTypes.INDENT).isEmpty()) {
 			throw new SyntaxErrorException("Must have indent formatting for TypeDef.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
@@ -144,6 +148,10 @@ public class PlainEnglishParser {
 			method.with = false;
 		}
 		RequireNewline();
+		if(!(tm.Peek(0).get().Type == TokenTypes.INDENT)) {
+			throw new SyntaxErrorException("Function block must have indent.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		while(tm.MatchAndRemove(TokenTypes.INDENT).isPresent());
 		Optional<StatementBlock> statementblock = StatementBlock();
 		if(statementblock.isEmpty()) {
 			throw new SyntaxErrorException("Method must have at least one statement.", tm.getCurrentLine(), tm.getCurrentColumn());
@@ -174,9 +182,6 @@ public class PlainEnglishParser {
 	
 	public Optional<StatementBlock> StatementBlock() throws SyntaxErrorException {
 		StatementBlock statementblock = new StatementBlock();
-		if(tm.MatchAndRemove(TokenTypes.INDENT).isEmpty()) {
-			throw new SyntaxErrorException("Statement block must start with an indent.", tm.getCurrentLine(), tm.getCurrentColumn());
-		}
 		while(tm.MatchAndRemove(TokenTypes.DEDENT).isEmpty()) {
 			Optional<Statement> statement = Statement();
 			if(statement.isPresent()) {
@@ -198,6 +203,8 @@ public class PlainEnglishParser {
 			statement.make = Make();
 		}else if(tm.Peek(0).get().Type == TokenTypes.IDENTIFIER) {
 			statement.functioncall = FunctionCall();
+		}else if(tm.Peek(0).get().Type == TokenTypes.NEWLINE) {
+			tm.MatchAndRemove(TokenTypes.NEWLINE);
 		}else {
 			throw new SyntaxErrorException("No valid statement tokens: If, Loop, Set, Make or Function Call", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
@@ -216,6 +223,10 @@ public class PlainEnglishParser {
 		}
 		$if.boolexpterm = boolExpTerm.get();
 		RequireNewline();
+		if(!(tm.Peek(0).get().Type == TokenTypes.INDENT)) {
+			throw new SyntaxErrorException("If statement block must have indent.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		while(tm.MatchAndRemove(TokenTypes.INDENT).isPresent());
 		Optional<StatementBlock> statementblock = StatementBlock();
 		if(statementblock.isEmpty()) {
 			throw new SyntaxErrorException("If statement must have at least one statement in block.", tm.getCurrentLine(), tm.getCurrentColumn());
@@ -223,9 +234,11 @@ public class PlainEnglishParser {
 		$if.statementblock = statementblock.get();
 		if(tm.MatchAndRemove(TokenTypes.ELSE).isPresent()) {
 			$if.$else = true;
-			if(tm.MatchAndRemove(TokenTypes.NEWLINE).isEmpty()) {
-				throw new SyntaxErrorException("Newline token is required after else statement.", tm.getCurrentLine(), tm.getCurrentColumn());
+			RequireNewline();
+			if(tm.MatchAndRemove(TokenTypes.INDENT).isEmpty()) {
+				throw new SyntaxErrorException("Indentation required when starting else block.", tm.getCurrentLine(), tm.getCurrentColumn());
 			}
+			while(tm.MatchAndRemove(TokenTypes.INDENT).isPresent());
 			statementblock = StatementBlock();
 			if(statementblock.isEmpty()) {
 				throw new SyntaxErrorException("Else statement must have at least one statement in block.", tm.getCurrentLine(), tm.getCurrentColumn());
@@ -432,6 +445,10 @@ public class PlainEnglishParser {
 		}
 		loop.boolexpterm = boolexpterm.get();
 		RequireNewline();
+		if(!(tm.Peek(0).get().Type == TokenTypes.INDENT)) {
+			throw new SyntaxErrorException("Function block must have indent.", tm.getCurrentLine(), tm.getCurrentColumn());
+		}
+		while(tm.MatchAndRemove(TokenTypes.INDENT).isPresent());
 		Optional<StatementBlock> stateblock = StatementBlock();
 		if(stateblock.isEmpty()) {
 			throw new SyntaxErrorException("Loop must have a statement block.", tm.getCurrentLine(), tm.getCurrentColumn());

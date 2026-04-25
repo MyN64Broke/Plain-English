@@ -84,7 +84,14 @@ public class Lexer    {
     			}
     		}else if(PuncMap.containsKey(Character.toString(C)) || ( !tm.isAtEnd(1) && PuncMap.containsKey(Character.toString(C) + Character.toString(tm.peekCharacter())))) {
     			tokens.add(readPunctuation());
-    		}else if(C == '\n') {
+    		}else if(C == '\r' && tm.peekCharacter() == '\n') {
+    			tm.increment();
+    			tokens.add(new Token(TokenTypes.NEWLINE, line, col, Character.toString(C)));
+    			tm.newline();
+    			if(!tm.isAtEnd(1)) {
+    				indentation = readWhitespace(indentation);
+    			}
+    		}else if(C == '\n' || C == '\r') {
     			tokens.add(new Token(TokenTypes.NEWLINE, line, col, Character.toString(C)));
     			tm.newline();
     			if(!tm.isAtEnd(1)) {
@@ -109,7 +116,7 @@ public class Lexer    {
     		}else if(C == ' ') {
     			tm.increment();
     		}else {
-    			throw new SyntaxErrorException("It looks like you have an unusable character at: " + line + ", " + col, line, col);
+    			throw new SyntaxErrorException("It looks like you have unusable character \"" + C + "\" at: " + line + ", " + col, line, col);
     		}
     	}
     	while(indentation > 0) {
@@ -129,7 +136,7 @@ public class Lexer    {
     		line = tm.getLine();
     		col = tm.getCol();
     		char C = tm.getCharacter();
-    		if(tm.getCharacter() == '\n' || PuncMap.containsKey(Character.toString(C))) {
+    		if(C == '\n' || C == '\r' || PuncMap.containsKey(Character.toString(C))) {
     			break;
     		}else {
 	    		buffer += C;
@@ -182,7 +189,7 @@ public class Lexer    {
 	    		if(!tm.isAtEnd()) {
 	    			tm.increment();
 	    		}
-	    	}else if(!(Character.isLetter(peek) || Character.isDigit(peek) || peek == ' ' || peek == '\n')) {
+	    	}else if(!(Character.isLetter(peek) || Character.isDigit(peek) || peek == ' ' || peek == '\n' || peek == '\r')) {
 	    		return puncToken = new Token(PuncMap.get(buffer), line, col);
 	    	}else {
 	    		puncToken = new Token(PuncMap.get(buffer), tm.getLine(), tm.getCol());
@@ -219,7 +226,7 @@ public class Lexer    {
     	char C = tm.getCharacter();
     	if(C == '/') {
     		if(!tm.isAtEnd()) {
-				while(tm.peekCharacter() != '\n') {
+				while(tm.peekCharacter() != '\n' || tm.peekCharacter() != '\r') {
 					if(!tm.isAtEnd()) {
 						tm.increment();
 					}
@@ -235,7 +242,12 @@ public class Lexer    {
 						tm.increment();
 						return;
 					}
-					if(!tm.isAtEnd()) {
+					if(!tm.isAtEnd() && (C =='\r' && tm.peekCharacter() == '\n')){
+						tm.increment();
+						tm.newline();
+					}else if(!tm.isAtEnd() && (C == '\n' || C == '\r')) {
+						tm.newline();
+					}else if(!tm.isAtEnd()) {
 						tm.increment();
 					}
 				}
@@ -245,7 +257,7 @@ public class Lexer    {
     
     private int readWhitespace(int currentIndent) throws SyntaxErrorException {
     	int indent = 0;
-    	if(tm.getCharacter() == '\n') {
+    	if(tm.getCharacter() == '\n' || tm.getCharacter() == '\r') {
     		return currentIndent;
     	}
     	while(tm.getCharacter() == ' ' || tm.getCharacter() == '\t') {
@@ -258,6 +270,7 @@ public class Lexer    {
     		}else if(tm.getCharacter() == '\t') {
     			indent++;
     			tm.increment();
+    			tm.adjustColForIndent();
     		}else{
     			throw new SyntaxErrorException("Incorrect number of spaces to start new line.", tm.getLine(), tm.getCol());
     		}
