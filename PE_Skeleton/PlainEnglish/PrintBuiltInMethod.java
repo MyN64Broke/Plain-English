@@ -24,7 +24,7 @@ public class PrintBuiltInMethod extends BuiltInMethod {
         this.parameter.add(p4);
 
         var p5 = new Parameter();
-        p5.paramType = "thing4";
+        p5.paramType = "thing5";
         this.parameter.add(p5);
     }
 
