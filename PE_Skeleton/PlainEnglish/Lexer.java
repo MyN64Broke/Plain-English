@@ -190,6 +190,7 @@ public class Lexer    {
 	    			tm.increment();
 	    		}
 	    	}else if(!(Character.isLetter(peek) || Character.isDigit(peek) || peek == ' ' || peek == '\n' || peek == '\r')) {
+	    		tm.increment();
 	    		return puncToken = new Token(PuncMap.get(buffer), line, col);
 	    	}else {
 	    		puncToken = new Token(PuncMap.get(buffer), tm.getLine(), tm.getCol());

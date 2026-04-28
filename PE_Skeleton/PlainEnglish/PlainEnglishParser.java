@@ -205,6 +205,7 @@ public class PlainEnglishParser {
 			statement.functioncall = FunctionCall();
 		}else if(tm.Peek(0).get().Type == TokenTypes.NEWLINE) {
 			tm.MatchAndRemove(TokenTypes.NEWLINE);
+			statement = Statement().get();
 		}else {
 			throw new SyntaxErrorException("No valid statement tokens: If, Loop, Set, Make or Function Call", tm.getCurrentLine(), tm.getCurrentColumn());
 		}

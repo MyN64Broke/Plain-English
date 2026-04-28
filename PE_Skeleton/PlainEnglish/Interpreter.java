@@ -4,11 +4,6 @@ import java.util.Map;
 
 import PlainEnglish.AST.*;
 
-/*
- * TODO:
- * evalExpression
- * set evaluations
- */
 public class Interpreter {
     private final Program program;
     private HashMap<String, InterpreterDataType> variables;
@@ -25,6 +20,7 @@ public class Interpreter {
     	for(Method method : program.method) {
     		if(method.name.equals("Run")) {
     			run = method;
+    			break;
     		}
     	}
     	if(run == null) {
@@ -34,9 +30,10 @@ public class Interpreter {
     }
     
     InterpreterDataType processMethod(Method method, HashMap<String, InterpreterDataType> params, InterpreterDataType obj) {
-    	HashMap<String, InterpreterDataType> scope = params;
+    	HashMap<String, InterpreterDataType> scope = new HashMap<String, InterpreterDataType>();
+    	scope.putAll(params);
     	scope.putAll(variables);
-    	if(method.with) {
+    	if(method.className.isPresent()) {
     		if(obj instanceof ObjectInterpreterDataType o) {
         		for(Map.Entry<String, InterpreterDataType> entry : o.fields.entrySet()) {
         			scope.put(entry.getKey(), entry.getValue());
@@ -67,7 +64,8 @@ public class Interpreter {
         		}
         		obj = scope.get("Boolean");
         	}
-    		HashMap<String, InterpreterDataType> temp = scope;
+    		HashMap<String, InterpreterDataType> temp = new HashMap<String, InterpreterDataType>();
+    		temp.putAll(scope);
 			temp.keySet().removeAll(variables.keySet());
 			scope.keySet().removeAll(temp.keySet());
 			variables = scope;
@@ -76,7 +74,8 @@ public class Interpreter {
     		for(Statement state : method.statementblock.statement) {
     			scope = processStatement(state, scope);
     		}
-    		HashMap<String, InterpreterDataType> temp = scope;
+    		HashMap<String, InterpreterDataType> temp = new HashMap<String, InterpreterDataType>();
+    		temp.putAll(scope);
 			temp.keySet().removeAll(variables.keySet());
 			scope.keySet().removeAll(temp.keySet());
 			variables = scope;
@@ -89,7 +88,8 @@ public class Interpreter {
     		If theIf = s.$if.get();
     		if(evalBooleanExpression(theIf.boolexpterm, scope)) {
     			StatementBlock block = theIf.statementblock;
-    			HashMap<String, InterpreterDataType> localVariables = scope;
+    			HashMap<String, InterpreterDataType> localVariables = new HashMap<String, InterpreterDataType>();
+    			localVariables.putAll(scope);
     			for(Statement state : block.statement) {
     				HashMap<String, InterpreterDataType> newVariables = processStatement(state, localVariables);
     				if(newVariables != null) {
@@ -98,7 +98,8 @@ public class Interpreter {
     			}
     			//Make values of scope change to what they were altered to
     			//In block without carrying over all of the block scope variables
-    			HashMap<String, InterpreterDataType> temp = localVariables;
+    			HashMap<String, InterpreterDataType> temp = new HashMap<String, InterpreterDataType>();
+    			temp.putAll(localVariables);
     			temp.keySet().removeAll(scope.keySet());
     			localVariables.keySet().removeAll(temp.keySet());
     			scope = localVariables;
@@ -113,7 +114,8 @@ public class Interpreter {
     			}
     			//Make values of scope change to what they were altered to
     			//In block without carrying over all of the block scope variables
-    			HashMap<String, InterpreterDataType> temp = localVariables;
+    			HashMap<String, InterpreterDataType> temp = new HashMap<String, InterpreterDataType>();
+    			temp.putAll(localVariables);
     			temp.keySet().removeAll(scope.keySet());
     			localVariables.keySet().removeAll(temp.keySet());
     			scope = localVariables;
@@ -122,7 +124,8 @@ public class Interpreter {
     	}else if(s.loop.orElse(null) instanceof Loop) {
     		Loop theLoop = s.loop.get();
     		while(evalBooleanExpression(theLoop.boolexpterm, scope)) {
-    			HashMap<String, InterpreterDataType> localVariables = scope;
+    			HashMap<String, InterpreterDataType> localVariables = new HashMap<String, InterpreterDataType>();
+    			localVariables.putAll(scope);
     			for(Statement state : theLoop.statementblock.statement) {
     				HashMap<String, InterpreterDataType> newVariables = processStatement(state, localVariables);
     				if(newVariables != null) {
@@ -131,7 +134,8 @@ public class Interpreter {
     			}
     			//Make values of scope change to what they were altered to
     			//In block without carrying over all of the block scope variables
-    			HashMap<String, InterpreterDataType> temp = localVariables;
+    			HashMap<String, InterpreterDataType> temp = new HashMap<String, InterpreterDataType>();
+    			temp.putAll(localVariables);
     			temp.keySet().removeAll(scope.keySet());
     			localVariables.keySet().removeAll(temp.keySet());
     			scope = localVariables;
@@ -213,7 +217,7 @@ public class Interpreter {
     				HashMap<String, InterpreterDataType> params = new HashMap<>();
     				int i = 0;
     				for(Expression e : funcCall.parameter) {
-    					params.put(method.parameter.get(i).nameOverride.orElse("param" + i), evalExpression(e, scope));
+    					params.put(method.parameter.get(i).nameOverride.orElse(method.parameter.get(i).paramType), evalExpression(e, scope));
     					i++;
     				}
     				InterpreterDataType obj = null;
@@ -376,7 +380,7 @@ public class Interpreter {
 	    			}
 	    		case lessthan:
 	    			if(lhs instanceof NumberInterpreterDataType l6 && rhs instanceof NumberInterpreterDataType r6) {
-	    				if(Float.valueOf(l6.value) <= Float.valueOf(r6.value)) {
+	    				if(Float.valueOf(l6.value) < Float.valueOf(r6.value)) {
 	    					return true;
 	    				}else {
 	    					return false;
@@ -403,16 +407,17 @@ public class Interpreter {
     				newNum.value = Float.parseFloat(f.number.get());
     				factors[j] = newNum;
     			}else if(f.variablereference.isPresent()) {
-    				InterpreterDataType newType = scope.get(f.variablereference.get().name);
-    				if(newType == null) {
+    				InterpreterDataType newType;
+    				InterpreterDataType temp = scope.get(f.variablereference.get().name);
+    				if(temp == null) {
     					if(f.variablereference.get().of) {
-    						newType = scope.get(f.variablereference.get().$object.get());
-    						if(newType == null) {
+    						temp = scope.get(f.variablereference.get().$object.get());
+    						if(temp == null) {
     							throw new RuntimeException("Variable \"" + f.variablereference.get().$object.get() + "\" does not exist in scope.");
     						}
-    						if(newType instanceof ObjectInterpreterDataType o) {
+    						if(temp instanceof ObjectInterpreterDataType o) {
     							if(o.fields.containsKey(f.variablereference.get().name)) {
-    								newType = o.fields.get(f.variablereference.get().name);
+    								temp = o.fields.get(f.variablereference.get().name);
     							}else {
     								throw new RuntimeException("Field \"" + f.variablereference.get().name + "\" does not exist in object \"" + o + "\".");
     							}
@@ -422,9 +427,21 @@ public class Interpreter {
     					}else {
     						throw new RuntimeException("Variable \"" + f.variablereference.get().name + "\" does not exist in scope.");
     					}
-    				}else {
-    					factors[j] = newType;
     				}
+    				if(temp instanceof NumberInterpreterDataType) {
+    					newType = new NumberInterpreterDataType();
+    					newType.Assign(temp);
+    				}else if(temp instanceof StringInterpreterDataType) {
+    					newType = new StringInterpreterDataType();
+    					newType.Assign(temp);
+    				}else if(temp instanceof BooleanInterpreterDataType) {
+    					newType = new BooleanInterpreterDataType();
+    					newType.Assign(temp);
+    				}else {
+    					newType = new ObjectInterpreterDataType();
+    					newType.Assign(temp);
+    				}
+    				factors[j] = newType;
     			}else if(f.$true) {
     				BooleanInterpreterDataType newBool = new BooleanInterpreterDataType();
     				newBool.value = true;
@@ -467,7 +484,7 @@ public class Interpreter {
     	InterpreterDataType expAnswer = terms[0];
     	for(i = 1; i < terms.length; i++) {
     		InterpreterDataType nextTerm = terms[i];
-    		plusORhyphen theplusORhyphen = e.theplusORhyphen.get(i);
+    		plusORhyphen theplusORhyphen = e.theplusORhyphen.get(i - 1);
     		if(expAnswer instanceof NumberInterpreterDataType n) {
     			if(nextTerm instanceof NumberInterpreterDataType n2) {
     				switch(theplusORhyphen) {
@@ -652,22 +669,22 @@ public class Interpreter {
 	    	int i = 0;
 	    	//Type-check parameters
 	    	for(Parameter p : method.parameter) {
-	    		InterpreterDataType type = params.get(method.parameter.get(i).nameOverride.orElse("param" + i));
+	    		InterpreterDataType type = params.get(method.parameter.get(i).nameOverride.orElse(p.paramType));
 	    		findType:
 	    		switch(p.paramType) {
 		    		case "number", "Number":
 		    			if(!(type instanceof NumberInterpreterDataType)) {
-		    				throw new RuntimeException("Parameter \"" + p.nameOverride + "\" in function \"" + method.name + "\" must be of type " + p.paramType + ".");
+		    				throw new RuntimeException("Parameter \"" + p.nameOverride.orElse(p.paramType) + "\" in function \"" + method.name + "\" must be of type " + p.paramType + ".");
 		    			}
 		    			break;
 		    		case "string", "String":
 		    			if(!(type instanceof StringInterpreterDataType)) {
-		    				throw new RuntimeException("Parameter \"" + p.nameOverride + "\" in function \"" + method.name + "\" must be of type " + p.paramType + ".");
+		    				throw new RuntimeException("Parameter \"" + p.nameOverride.orElse(p.paramType) + "\" in function \"" + method.name + "\" must be of type " + p.paramType + ".");
 		    			}
 		    			break;
 		    		case "boolean", "Boolean", "bool", "Bool":
 		    			if(!(type instanceof BooleanInterpreterDataType)) {
-		    				throw new RuntimeException("Parameter \"" + p.nameOverride + "\" in function \"" + method.name + "\" must be of type " + p.paramType + ".");
+		    				throw new RuntimeException("Parameter \"" + p.nameOverride.orElse(p.paramType) + "\" in function \"" + method.name + "\" must be of type " + p.paramType + ".");
 		    			}
 		    			break;
 	    			default:
@@ -677,13 +694,13 @@ public class Interpreter {
 		    						if(typedef.name.equals(t.type)) {
 		    							break findType;
 		    						}else {
-		    							throw new RuntimeException("Parameter \"" + p.nameOverride + "\" in function \"" + method.name + "\" must be of type " + p.paramType + ".");
+		    							throw new RuntimeException("Parameter \"" + p.nameOverride.orElse(p.paramType) + "\" in function \"" + method.name + "\" must be of type " + p.paramType + ".");
 		    						}
 		    					}
 		    				}
 		    				throw new RuntimeException("Date type " + p.paramType + " does not exist.");
 	    				}else {
-	    					throw new RuntimeException("Parameter \"" + p.nameOverride + "\" in function \"" + method.name + "\" must be of type " + p.paramType + ".");
+	    					throw new RuntimeException("Parameter \"" + p.nameOverride.orElse(p.paramType) + "\" in function \"" + method.name + "\" must be of type " + p.paramType + ".");
 	    				}
 	    		}
 	    		i++;

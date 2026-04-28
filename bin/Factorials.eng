@@ -1,9 +1,9 @@
-To Factorial with number, number named retVal
+To Factorial a Number with number named facNumber
     Make number named counter
     Set counter to 1
-    Set retVal to 1
-    Loop counter <= number
-        Set retVal to retVal * counter
+    Set Number to 1
+    Loop counter <= facNumber
+        Set Number to Number * counter
         Set counter to counter + 1
 
 To Run
@@ -11,7 +11,8 @@ To Run
     Print with "---------"
     Make number named tenFac
     Make number named fiveFac
-    Factorial with 10, tenFac
+    Factorial tenFac with 10
     Print with tenFac
-    Factorial with 5, fiveFac
+    Factorial fiveFac with 5
     Print with fiveFac
+    
