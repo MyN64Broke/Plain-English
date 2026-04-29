@@ -46,7 +46,7 @@ public class Interpreter {
         		}
         		obj = o;
         	}else if(obj instanceof NumberInterpreterDataType n){
-        		scope.put("Number", obj);
+        		scope.put("Number", n);
         		for(Statement state : method.statementblock.statement) {
         			scope = processStatement(state, scope);
         		}
@@ -188,8 +188,9 @@ public class Interpreter {
     				break;
     			default:
     				for(TypeDef typedef : program.typedef) {
-    					if(typedef.name.equals(makeStatement.name)) {
-    						ObjectInterpreterDataType newObject = new ObjectInterpreterDataType(); 
+    					if(typedef.name.equals(makeStatement.type)) {
+    						ObjectInterpreterDataType newObject = new ObjectInterpreterDataType();
+    						newObject.type = makeStatement.type;
     						newObject = makeObjectVariable(newObject, typedef);
     						scope.put(s.make.get().name, newObject);
     						break findType;
@@ -222,7 +223,22 @@ public class Interpreter {
     				}
     				InterpreterDataType obj = null;
     				if(funcCall.obj.isPresent()) {
-    					obj = scope.get(funcCall.obj.get());
+    					InterpreterDataType temp = scope.get(funcCall.obj.get());
+    					if(temp instanceof NumberInterpreterDataType) {
+        					obj = new NumberInterpreterDataType();
+        					obj.Assign(temp);
+        				}else if(temp instanceof StringInterpreterDataType) {
+        					obj = new StringInterpreterDataType();
+        					obj.Assign(temp);
+        				}else if(temp instanceof BooleanInterpreterDataType) {
+        					obj = new BooleanInterpreterDataType();
+        					obj.Assign(temp);
+        				}else if(temp instanceof ObjectInterpreterDataType o){
+        					ObjectInterpreterDataType obj2 = new ObjectInterpreterDataType();
+        					obj2.type = o.type;
+        					obj2.Assign(o);
+        					obj = obj2;
+        				}
     					obj = processFunctionCall(funcCall, method, params, obj);
     					scope.put(funcCall.obj.get(), obj);
     				}else {
@@ -288,9 +304,10 @@ public class Interpreter {
     		switch(factor.thecompareOps.get()) {
 	    		case doubleequal:
 	    			if(lhs instanceof NumberInterpreterDataType l && rhs instanceof NumberInterpreterDataType r) {
-	    				if(Float.valueOf(l.value) == Float.valueOf(r.value)) {
+	    				if(l.value == r.value) {
 	    					return true;
 	    				}else {
+	    					System.out.println(l.value + ", " + r.value);
 	    					return false;
 	    				}
 	    			}else if(lhs instanceof StringInterpreterDataType l && rhs instanceof StringInterpreterDataType r) {
@@ -437,9 +454,13 @@ public class Interpreter {
     				}else if(temp instanceof BooleanInterpreterDataType) {
     					newType = new BooleanInterpreterDataType();
     					newType.Assign(temp);
+    				}else if(temp instanceof ObjectInterpreterDataType o){
+    					ObjectInterpreterDataType newType2 = new ObjectInterpreterDataType();
+    					newType2.type = o.type;
+    					newType2.Assign(o);
+    					newType = newType2;
     				}else {
-    					newType = new ObjectInterpreterDataType();
-    					newType.Assign(temp);
+    					throw new RuntimeException("How you have a variable with NO type???");
     				}
     				factors[j] = newType;
     			}else if(f.$true) {

@@ -78,10 +78,7 @@ public class PlainEnglishParser {
 			throw new SyntaxErrorException("TypeDef block must have indent.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
 		while(tm.MatchAndRemove(TokenTypes.INDENT).isPresent());
-		if(tm.MatchAndRemove(TokenTypes.INDENT).isEmpty()) {
-			throw new SyntaxErrorException("Must have indent formatting for TypeDef.", tm.getCurrentLine(), tm.getCurrentColumn());
-		}
-		while(tm.Peek(1).get().Type != TokenTypes.DEDENT) {
+		while(tm.Peek(0).get().Type != TokenTypes.DEDENT) {
 			Optional<Field> field = Field();
 			if(field.isEmpty()) {
 				throw new SyntaxErrorException("Missing Field in TypeDef.", tm.getCurrentLine(), tm.getCurrentColumn());
@@ -91,7 +88,7 @@ public class PlainEnglishParser {
 		if(tm.MatchAndRemove(TokenTypes.DEDENT).isEmpty()) {
 			throw new SyntaxErrorException("Must have dedent formatting for TypeDef.", tm.getCurrentLine(), tm.getCurrentColumn());
 		}
-		while(tm.Peek(1).get().Type == TokenTypes.NEWLINE) {
+		while(tm.Peek(0).get().Type == TokenTypes.NEWLINE) {
 			tm.MatchAndRemove(TokenTypes.NEWLINE);
 		}
 		return Optional.of(typedef);

@@ -1,6 +1,5 @@
 To Search with number named start, number named end, number named value, number named searchCalls
     Make number named current
-    Print with start
     Set current to start + (end - start)/2
     If current == value
         Print with "Number of recursive calls: "
