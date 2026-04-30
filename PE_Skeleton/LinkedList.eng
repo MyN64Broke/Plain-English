@@ -1,0 +1,22 @@
+A Node is
+	number value
+	Node next
+	
+To Add a Node with number named value
+	Make Node named newNode
+	Set value of newNode to value
+	Set next to newNode
+	
+/*
+To PrintList with Node named nextNode
+	Loop next of nextNode != null
+		Print with value of nextNode
+		Set nextNode to next of nextNode
+*/
+To Run
+	Make Node named head
+	Make Node named second
+	Set value of head to 1
+	Set value of second to 2
+	Set next of head to second
+	//PrintList with head

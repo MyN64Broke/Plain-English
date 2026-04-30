@@ -142,30 +142,32 @@ public class Interpreter {
     		}
     		return scope;
     	}else if(s.set.orElse(null) instanceof Set) {
-    		InterpreterDataType target = scope.get(s.set.get().variablereference.name);
-    		if(target == null) {
-    			if(s.set.get().variablereference.of) {
-    				target = scope.get(s.set.get().variablereference.$object.get());
-    				if(target == null) {
-            			throw new RuntimeException("Variable \"" + s.set.get().variablereference.$object.get() + "\" does not exist in scope.");
-        			}
-    				if(target instanceof ObjectInterpreterDataType t) {
-        				if(t.fields.containsKey(s.set.get().variablereference.name)) {
-        					t.fields.put(s.set.get().variablereference.name, evalExpression(s.set.get().expression, scope));
-        					target = t;
-        				}else {
-        					throw new RuntimeException("Field \"" + s.set.get().variablereference.name + "\" not present in object \"" + t + "\".");
-        				}
-        			}else {
-        				throw new RuntimeException("Variable \"" + s.set.get().variablereference.name + "\" is not of type Object.");
-        			}
-    			}else {
-    				throw new RuntimeException("Variable \"" + s.set.get().variablereference.name + "\" does not exist in scope.");
+    		InterpreterDataType target;
+    		if(s.set.get().variablereference.of) {
+    			target = scope.get(s.set.get().variablereference.$object.get());
+				if(target == null) {
+        			throw new RuntimeException("Variable \"" + s.set.get().variablereference.$object.get() + "\" does not exist in scope.");
     			}
-    		}else {
-    			target.Assign(evalExpression(s.set.get().expression, scope));
+				if(target instanceof ObjectInterpreterDataType t) {
+    				if(t.fields.containsKey(s.set.get().variablereference.name)) {
+    					t.fields.put(s.set.get().variablereference.name, evalExpression(s.set.get().expression, scope));
+    					scope.put(s.set.get().variablereference.$object.get(), t);
+    				}else {
+    					throw new RuntimeException("Field \"" + s.set.get().variablereference.name + "\" not present in object \"" + t + "\".");
+    				}
+    			}else {
+    				throw new RuntimeException("Variable \"" + s.set.get().variablereference.name + "\" is not of type Object.");
+    			}
+			}else {
+				target = scope.get(s.set.get().variablereference.name);
+				if(target == null) {
+					throw new RuntimeException("Variable \"" + s.set.get().variablereference.name + "\" does not exist in scope.");
+				}
+				target.Assign(evalExpression(s.set.get().expression, scope));
+    			scope.put(s.set.get().variablereference.name, target);
     		}
-    		scope.put(s.set.get().variablereference.name, target);
+    		
+    		
     		return scope;
     	}else if(s.make.orElse(null) instanceof Make) {
     		Make makeStatement = s.make.get();
@@ -307,7 +309,6 @@ public class Interpreter {
 	    				if(l.value == r.value) {
 	    					return true;
 	    				}else {
-	    					System.out.println(l.value + ", " + r.value);
 	    					return false;
 	    				}
 	    			}else if(lhs instanceof StringInterpreterDataType l && rhs instanceof StringInterpreterDataType r) {
@@ -425,23 +426,24 @@ public class Interpreter {
     				factors[j] = newNum;
     			}else if(f.variablereference.isPresent()) {
     				InterpreterDataType newType;
-    				InterpreterDataType temp = scope.get(f.variablereference.get().name);
-    				if(temp == null) {
-    					if(f.variablereference.get().of) {
-    						temp = scope.get(f.variablereference.get().$object.get());
-    						if(temp == null) {
-    							throw new RuntimeException("Variable \"" + f.variablereference.get().$object.get() + "\" does not exist in scope.");
-    						}
-    						if(temp instanceof ObjectInterpreterDataType o) {
-    							if(o.fields.containsKey(f.variablereference.get().name)) {
-    								temp = o.fields.get(f.variablereference.get().name);
-    							}else {
-    								throw new RuntimeException("Field \"" + f.variablereference.get().name + "\" does not exist in object \"" + o + "\".");
-    							}
+    				InterpreterDataType temp;
+    				if(f.variablereference.get().of) {
+    					temp = scope.get(f.variablereference.get().$object.get());
+    					if(temp == null) {
+    						throw new RuntimeException("Variable \"" + f.variablereference.get().$object.get() + "\" does not exist in scope.");
+    					}
+    					if(temp instanceof ObjectInterpreterDataType o) {
+    						if(o.fields.containsKey(f.variablereference.get().name)) {
+    							temp = o.fields.get(f.variablereference.get().name);
     						}else {
-    							throw new RuntimeException("Variable \"" + f.variablereference.get().$object.get() + "\" is not of type Object.");
+    							throw new RuntimeException("Field \"" + f.variablereference.get().name + "\" does not exist in object \"" + o + "\".");
     						}
     					}else {
+    						throw new RuntimeException("Variable \"" + f.variablereference.get().$object.get() + "\" is not of type Object.");
+    					}
+    				}else {
+    					temp = scope.get(f.variablereference.get().name);
+    					if(temp == null){
     						throw new RuntimeException("Variable \"" + f.variablereference.get().name + "\" does not exist in scope.");
     					}
     				}
@@ -638,6 +640,7 @@ public class Interpreter {
     }
 
     ObjectInterpreterDataType makeObjectVariable(ObjectInterpreterDataType newObject, TypeDef typedef) {
+    	//field is a field of the object
     	for(Field field : typedef.field) {
     		findType:
 	    	switch (field.type) {
@@ -654,10 +657,10 @@ public class Interpreter {
 					newObject.fields.put(field.name, newBool);
 					break;
 				default:
+					//fieldTypedef is the TypeDef for a field of the object
 					for(TypeDef fieldTypedef : program.typedef) {
     					if(fieldTypedef.name.equals(typedef.name)) {
-    						ObjectInterpreterDataType newFieldObject = new ObjectInterpreterDataType(); 
-    						newFieldObject = makeObjectVariable(newFieldObject, fieldTypedef);
+    						ObjectInterpreterDataType newFieldObject = new ObjectInterpreterDataType();
     						newObject.fields.put(field.name, newFieldObject);
     						break findType;
     					}

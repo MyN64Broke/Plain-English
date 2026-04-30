@@ -1,0 +1,7 @@
+To Run
+	Make string named output
+	Set output to "Hello"
+	Print with output
+	Set output to output + " World!"
+	Print with output
+	Print with ":)"

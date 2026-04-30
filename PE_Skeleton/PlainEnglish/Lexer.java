@@ -226,13 +226,11 @@ public class Lexer    {
     	tm.increment();
     	char C = tm.getCharacter();
     	if(C == '/') {
-    		if(!tm.isAtEnd()) {
-				while(tm.peekCharacter() != '\n' || tm.peekCharacter() != '\r') {
-					if(!tm.isAtEnd()) {
-						tm.increment();
-					}
+    		while(!tm.isAtEnd()) {
+    			tm.increment();
+				if(tm.getCharacter() == '\n' || tm.getCharacter() == '\r') {
+					return;
 				}
-				return;
     		}
 		}else if(C == '*') {
 			if(!tm.isAtEnd()) {
